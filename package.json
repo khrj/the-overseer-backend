@@ -1,0 +1,22 @@
+{
+	"name": "the-overseer",
+	"version": "1.0.0",
+	"main": "index.js",
+	"license": "GPL-3.0",
+	"dependencies": {
+		"@slack/bolt": "^2.1.1",
+		"@types/node": "^14.0.14",
+		"dotenv": "^8.2.0",
+		"ts-node": "^8.10.2",
+		"typescript": "^3.9.5"
+	},
+	"devDependencies": {
+		"nodemon": "^2.0.4"
+	},
+	"scripts": {
+		"start": "ts-node -r dotenv/config src/index.ts",
+		"dev": "nodemon -r dotenv/config src/index.ts",
+		"build": "tsc src/index.ts --outDir dist --pretty",
+		"ngrok": "ngrok http 3000"
+	}
+}
