@@ -3,6 +3,10 @@
 
 name: Node.js CI
 
+env:
+  SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+  TOKEN: ${{ secrets.TOKEN }}
+
 on:
   push:
     branches: [ main ]
