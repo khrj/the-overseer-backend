@@ -16,7 +16,7 @@ const app = new App({
 
     async function getChannels(cursor) {
         const conversations = await app.client.conversations.list({
-            token: process.env.token,
+            token: process.env.TOKEN,
             limit: 200,
             cursor: cursor
         })
@@ -48,7 +48,7 @@ const app = new App({
                 for ([user, amount] of top20) {
                     try {
                         const response = await app.client.users.info({
-                            token: process.env.token,
+                            token: process.env.TOKEN,
                             user: user
                         })
                         if (!response.user.real_name || response.user.real_name == "undefined") {
@@ -80,7 +80,7 @@ const app = new App({
                 console.log("FAILED: " + params.channel)
                 try {
                     await app.client.conversations.join({
-                        token: process.env.token,
+                        token: process.env.TOKEN,
                         channe: params.channel
                     })
                     history = await method(params)
@@ -98,7 +98,7 @@ const app = new App({
 
             if (history.has_more) {
                 fetchHistoryQueue.push([app.client.conversations.history, {
-                    token: process.env.token,
+                    token: process.env.TOKEN,
                     channel: params.channel,
                     cursor: history.response_metadata.next_cursor,
                     limit: 1000,
@@ -113,7 +113,7 @@ const app = new App({
 
     function addLast30DaysAnalytics(channel) {
         fetchHistoryQueue.push([app.client.conversations.history, {
-            token: process.env.token,
+            token: process.env.TOKEN,
             channel: channel,
             limit: 1000,
             // Epoch time of 30 day prior date, in seconds
@@ -135,7 +135,7 @@ const app = new App({
 
 // const app = new App({
 //     signingSecret: process.env.signing_secret,
-//     token: process.env.token
+//     token: process.env.TOKEN
 // })
 
 // const channels = readFileSync('channels.txt', 'utf8').split(/\r?\n/)
@@ -144,7 +144,7 @@ const app = new App({
 //     let counter = 0
 //     channels.forEach((channel) => {
 //         app.client.conversations.join({
-//             token: process.env.token,
+//             token: process.env.TOKEN,
 //             channel: channel
 //         }).then(() => {
 //             console.log(`${counter}: ${channel}`)
