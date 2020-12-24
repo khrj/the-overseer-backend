@@ -39,8 +39,9 @@ const app = new App({
         // We're rate limited to 50 requests per minute
         for (let limit = 0; limit < 50; limit++) {
             if (fetchHistoryQueue.length <= 0) {
+                clearInterval(queueMonitor)
                 console.log("QUEUE OVER :)")
-
+                
                 const sortedValues = Object.entries(userMap).sort(([, a], [, b]) => b - a)
                 const top20 = sortedValues.slice(0, 20)
 
@@ -125,7 +126,7 @@ const app = new App({
     })
 
     processQueue()
-    setInterval(processQueue, 60 * 1000)
+    const queueMonitor = setInterval(processQueue, 60 * 1000)
 })()
 
 // import { App } from "@slack/bolt"
@@ -137,7 +138,7 @@ const app = new App({
 //     token: process.env.token
 // })
 
-// const channels = readFileSync('channelsNew.txt', 'utf8').split(/\r?\n/)
+// const channels = readFileSync('channels.txt', 'utf8').split(/\r?\n/)
 
 // app.start(process.env.PORT || 3000).then(() => {
 //     let counter = 0
