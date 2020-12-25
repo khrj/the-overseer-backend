@@ -8,7 +8,6 @@ env:
   TOKEN: ${{ secrets.TOKEN }}
   MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  REPO_SLUG: KhushrajRathod/TheOverseer
 
 on:
   push:
@@ -32,5 +31,25 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - run: yarn --frozen-lockfile
     - run: yarn start
-    - run: wget -c https://github.com/probonopd/uploadtool/raw/master/upload.sh
-    - run: bash upload.sh 20.json results.json
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      with:
+        tag_name: Latest
+        release_name: Latest
+        body: Hourly analytics computation
+    - name: Upload Top 20
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./20.json
+        asset_name: 20.json
+        asset_content_type: application/json
+    - name: Upload All Results
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./results.json
+        asset_name: results.json
+        asset_content_type: application/json
+
