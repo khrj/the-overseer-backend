@@ -29,8 +29,15 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+
     - run: yarn --frozen-lockfile
     - run: yarn start
+      
+    - uses: dev-drprasad/delete-tag-and-release@v0.1.2
+      with:
+        delete_release: true
+        tag_name: Latest
+        
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -38,6 +45,7 @@ jobs:
         tag_name: Latest
         release_name: Latest
         body: Hourly analytics computation
+    
     - name: Upload Top 20
       uses: actions/upload-release-asset@v1
       with:
@@ -45,6 +53,7 @@ jobs:
         asset_path: ./20.json
         asset_name: 20.json
         asset_content_type: application/json
+        
     - name: Upload All Results
       uses: actions/upload-release-asset@v1
       with:
