@@ -1,5 +1,6 @@
 const { App } = require("@slack/bolt")
 const { MongoClient } = require("mongodb")
+const { writeFileSync } = require("fs")
 
 const dbURI = `mongodb+srv://Replit:${process.env.MONGODB_PASSWORD}@cluster0.ua8g4.mongodb.net/<dbname>?retryWrites=true&w=majority`
 
@@ -73,6 +74,8 @@ const app = new App({
 
                 const sortedValues = Object.entries(userMap).sort(([, a], [, b]) => b - a)
                 const top20 = sortedValues.slice(0, 20)
+                
+                let namedTop20 = []
 
                 for ([user, amount] of top20) {
                     try {
@@ -81,8 +84,10 @@ const app = new App({
                             user: user
                         })
                         if (!response.user.real_name || response.user.real_name == "undefined") {
+                            namedTop20.push([user, amount])
                             console.log(`${user}: ${amount}`)
                         } else {
+                            namedTop20.push([user, amount])
                             console.log(`${response.user.real_name}: ${amount}`)
                         }
                     } catch (e) {
@@ -90,8 +95,12 @@ const app = new App({
                     }
                 }
 
+                writeFileSync("20.json", JSON.stringify(namedTop20))
+
                 console.log("ALL ENTRIES:")
                 console.dir(sortedValues, { depth: null })
+
+                writeFileSync("results.json", JSON.stringify(sortedValues))
 
                 process.exit(0)
             } else {

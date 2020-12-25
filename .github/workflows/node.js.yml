@@ -7,6 +7,7 @@ env:
   SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
   TOKEN: ${{ secrets.TOKEN }}
   MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 on:
   push:
@@ -24,9 +25,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Gather Data
+    - name: Setup Node
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
     - run: yarn --frozen-lockfile
     - run: yarn start
+    - run: wget -c https://github.com/probonopd/uploadtool/raw/master/upload.sh
+    - run: bash upload.sh 20.json results.json
