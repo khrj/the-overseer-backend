@@ -87,7 +87,7 @@ const app = new App({
                             namedTop20.push([user, amount])
                             console.log(`${user}: ${amount}`)
                         } else {
-                            namedTop20.push([user, amount])
+                            namedTop20.push([response.user.real_name, amount])
                             console.log(`${response.user.real_name}: ${amount}`)
                         }
                     } catch (e) {
