@@ -6,6 +6,7 @@ name: Node.js CI
 env:
   SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
   TOKEN: ${{ secrets.TOKEN }}
+  MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
 
 on:
   push:

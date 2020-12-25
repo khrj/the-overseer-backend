@@ -1,4 +1,12 @@
 const { App } = require("@slack/bolt")
+const { MongoClient } = require("mongodb")
+
+const dbURI = `mongodb+srv://Replit:${process.env.MONGODB_PASSWORD}@cluster0.ua8g4.mongodb.net/<dbname>?retryWrites=true&w=majority`
+
+const client = new MongoClient(dbURI, { useUnifiedTopology: true })
+
+let database
+let collection
 
 let fetchHistoryQueue = [
     //    [function, params]
@@ -11,8 +19,28 @@ const app = new App({
     ;
 (async () => {
     await app.start(process.env.PORT || 3000)
+    await client.connect()
+    database = client.db('Cluster0')
+    collection = database.collection('channels')
+
     let channels = []
     let userMap = {}
+
+    async function isValidChannel(channel) {
+        try {
+            const response = await collection.findOne({ channel: channel })
+            if (response.status === "approved") {
+                console.log("APPROVED: " + channel)
+                return true
+            } else {
+                console.log("EXPLICITLY REJECTED: " + channel)
+                return false
+            }
+        } catch (e) {
+            console.log("IMPLICITLY REJECTED: " + channel)
+            return false
+        }
+    }
 
     async function getChannels(cursor) {
         const conversations = await app.client.conversations.list({
@@ -21,14 +49,15 @@ const app = new App({
             cursor: cursor
         })
 
-        // @ts-ignore
-        conversations.channels.forEach(channel => {
+        for (channel of conversations.channels) {
             if (!channel.is_archived) {
-                channels.push(channel.id)
+                const valid = await isValidChannel(channel.id)
+                if (valid) {
+                    channels.push(channel.id)
+                }
             }
-        })
+        }
 
-        // @ts-ignore
         if (conversations.channels.length > 0 && conversations.response_metadata.next_cursor) {
             await getChannels(conversations.response_metadata.next_cursor)
         }
@@ -41,7 +70,7 @@ const app = new App({
             if (fetchHistoryQueue.length <= 0) {
                 clearInterval(queueMonitor)
                 console.log("QUEUE OVER :)")
-                
+
                 const sortedValues = Object.entries(userMap).sort(([, a], [, b]) => b - a)
                 const top20 = sortedValues.slice(0, 20)
 
@@ -72,7 +101,7 @@ const app = new App({
             const method = fetchHistoryQueue[0][0]
             const params = fetchHistoryQueue[0][1]
 
-            let history 
+            let history
 
             try {
                 history = await method(params)
