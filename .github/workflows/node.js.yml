@@ -8,6 +8,7 @@ env:
   TOKEN: ${{ secrets.TOKEN }}
   MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  REPO_SLUG: KhushrajRathod/TheOverseer
 
 on:
   push:
