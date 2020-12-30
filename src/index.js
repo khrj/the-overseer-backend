@@ -132,6 +132,16 @@ const app = new App({
                 if (message.user && message.user !== "undefined") {
                     userMap[message.user] ? userMap[message.user]++ : userMap[message.user] = 1
                 }
+
+                // this property isn't present on messages that don't have replies
+                if (message.reply_count) {
+                    fetchHistoryQueue.push([app.client.conversations.replies, {
+                        token: process.env.TOKEN,
+                        channel: params.channel,
+                        ts: message.thread_ts,
+                        limit: 1000,
+                    }])
+                }
             })
 
             if (history.has_more) {
