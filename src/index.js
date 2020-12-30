@@ -133,13 +133,14 @@ const app = new App({
                     userMap[message.user] ? userMap[message.user]++ : userMap[message.user] = 1
                 }
 
-                // this property isn't present on messages that don't have replies
-                if (message.reply_count) {
+                // the reply_count property is only present on messages that have replies. 
+                // i also compare the ts to the thread_ts to make sure we only count replies from a thread's parent message
+                if (message.reply_count & message.ts == message.thread_ts) {
                     fetchHistoryQueue.push([app.client.conversations.replies, {
                         token: process.env.TOKEN,
                         channel: params.channel,
                         ts: message.thread_ts,
-                        limit: 1000,
+                        limit: message.reply_count,
                     }])
                 }
             })
