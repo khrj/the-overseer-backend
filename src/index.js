@@ -13,6 +13,8 @@ let fetchHistoryQueue = [
     //    [function, params]
 ]
 
+let fetchReplyQueue = []
+
 const app = new App({
     signingSecret: process.env.SIGNING_SECRET,
     token: process.env.TOKEN
@@ -65,44 +67,14 @@ const app = new App({
     }
     await getChannels(undefined)
 
-    async function processQueue() {
+    async function processMessageQueue() {
         // We're rate limited to 50 requests per minute
         for (let limit = 0; limit < 50; limit++) {
             if (fetchHistoryQueue.length <= 0) {
-                clearInterval(queueMonitor)
-                console.log("QUEUE OVER :)")
-
-                const sortedValues = Object.entries(userMap).sort(([, a], [, b]) => b - a)
-                const top20 = sortedValues.slice(0, 20)
+                clearInterval(messageQueueMonitor)
+                console.log("MESSAGE QUEUE OVER :)")
+                tabulateFinalScores()
                 
-                let namedTop20 = []
-
-                for ([user, amount] of top20) {
-                    try {
-                        const response = await app.client.users.info({
-                            token: process.env.TOKEN,
-                            user: user
-                        })
-                        if (!response.user.real_name || response.user.real_name == "undefined") {
-                            namedTop20.push([user, amount])
-                            console.log(`${user}: ${amount}`)
-                        } else {
-                            namedTop20.push([response.user.real_name, amount])
-                            console.log(`${response.user.real_name}: ${amount}`)
-                        }
-                    } catch (e) {
-                        console.log(user, amount, "-- Errored")
-                    }
-                }
-
-                writeFileSync("20.json", JSON.stringify(namedTop20))
-
-                console.log("ALL ENTRIES:")
-                console.dir(sortedValues, { depth: null })
-
-                writeFileSync("results.json", JSON.stringify(sortedValues))
-
-                process.exit(0)
             } else {
                 console.log("QUEUE LENGTH: " + fetchHistoryQueue.length)
             }
@@ -136,7 +108,7 @@ const app = new App({
                 // the reply_count property is only present on messages that have replies. 
                 // i also compare the ts to the thread_ts to make sure we only count replies from a thread's parent message
                 if (message.reply_count & message.ts == message.thread_ts) {
-                    fetchHistoryQueue.push([app.client.conversations.replies, {
+                    fetchReplyQueue.push([app.client.conversations.replies, {
                         token: process.env.TOKEN,
                         channel: params.channel,
                         ts: message.thread_ts,
@@ -160,6 +132,87 @@ const app = new App({
         }
     }
 
+    async function processReplyQueue() {
+        // We're rate limited to 50 requests per minute
+        for (let limit = 0; limit < 50; limit++) {
+            if (fetchReplyQueue.length <= 0) {
+                clearInterval(replyQueueMonitor)
+                console.log("MESSAGE QUEUE OVER :)")
+                tabulateFinalScores()
+                
+            } else {
+                console.log("QUEUE LENGTH: " + fetchReplyQueue.length)
+            }
+
+            const method = fetchReplyQueue[0][0]
+            const params = fetchReplyQueue[0][1]
+
+            let history
+
+            try {
+                history = await method(params)
+            } catch (e) {
+                console.log("FAILED: " + params.channel)
+                try {
+                    await app.client.conversations.join({
+                        token: process.env.TOKEN,
+                        channel: params.channel
+                    })
+                    history = await method(params)
+                } catch (e) {
+                    fetchReplyQueue.shift()
+                    continue
+                }
+            }
+
+            history.messages.forEach(message => {
+                if (message.user && message.user !== "undefined") {
+                    userMap[message.user] ? userMap[message.user]++ : userMap[message.user] = 1
+                }
+            })
+
+            fetchReplyQueue.shift()
+        }
+    }
+
+    function tabulateFinalScores() {
+        if (fetchHistoryQueue.length <= 0 && fetchReplyQueue.length <= 0) {
+        const sortedValues = Object.entries(userMap).sort(([, a], [, b]) => b - a)
+                const top20 = sortedValues.slice(0, 20)
+                
+                let namedTop20 = []
+
+                for ([user, amount] of top20) {
+                    try {
+                        const response = await app.client.users.info({
+                            token: process.env.TOKEN,
+                            user: user,
+                        })
+                        
+                        if (!response.user.real_name || response.user.real_name == "undefined") {
+                            namedTop20.push([user, amount])
+                            console.log(`${user}: ${amount}`)
+                        } else {
+                            namedTop20.push([response.user.real_name, amount])
+                            console.log(`${response.user.real_name}: ${amount}`)
+                        }
+                    } catch (e) {
+                        console.log(user, amount, "-- Errored")
+                    }
+                }
+
+                writeFileSync("20.json", JSON.stringify(namedTop20))
+
+                console.log("ALL ENTRIES:")
+                console.dir(sortedValues, { depth: null })
+
+                writeFileSync("results.json", JSON.stringify(sortedValues))
+
+                process.exit(0)
+    }
+}
+
+
     function addLast30DaysAnalytics(channel) {
         fetchHistoryQueue.push([app.client.conversations.history, {
             token: process.env.TOKEN,
@@ -174,8 +227,12 @@ const app = new App({
         addLast30DaysAnalytics(channel)
     })
 
-    processQueue()
-    const queueMonitor = setInterval(processQueue, 60 * 1000)
+    processMessageQueue()
+    const messageQueueMonitor = setInterval(processMessageQueue, 60 * 1000)
+
+    processReplyQueue()
+    const replyQueueMonitor = setInterval(processReplyQueue, 60 * 1000)
+    
 })()
 
 // import { App } from "@slack/bolt"
