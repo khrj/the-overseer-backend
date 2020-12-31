@@ -67,6 +67,24 @@ const app = new App({
     }
     await getChannels(undefined)
 
+    async function doThing(history, method, params, arr) {
+        try {
+            history = await method(params)
+        } catch (e) {
+            console.log("FAILED: " + params.channel)
+            try {
+                await app.client.conversations.join({
+                    token: process.env.TOKEN,
+                    channel: params.channel
+                })
+                history = await method(params)
+            } catch (e) {
+                arr.shift()
+                continue
+            }
+        }
+    }
+
     async function processMessageQueue() {
         // We're rate limited to 50 requests per minute
         for (let limit = 0; limit < 50; limit++) {
@@ -84,21 +102,7 @@ const app = new App({
 
             let history
 
-            try {
-                history = await method(params)
-            } catch (e) {
-                console.log("FAILED: " + params.channel)
-                try {
-                    await app.client.conversations.join({
-                        token: process.env.TOKEN,
-                        channel: params.channel
-                    })
-                    history = await method(params)
-                } catch (e) {
-                    fetchHistoryQueue.shift()
-                    continue
-                }
-            }
+            doThing(history, method, params, fetchHistoryQueue)
 
             history.messages.forEach(message => {
                 if (message.user && message.user !== "undefined") {
@@ -137,7 +141,7 @@ const app = new App({
         for (let limit = 0; limit < 50; limit++) {
             if (fetchReplyQueue.length <= 0) {
                 clearInterval(replyQueueMonitor)
-                console.log("MESSAGE QUEUE OVER :)")
+                console.log("REPLY QUEUE OVER :)")
                 tabulateFinalScores()
                 
             } else {
@@ -149,21 +153,7 @@ const app = new App({
 
             let history
 
-            try {
-                history = await method(params)
-            } catch (e) {
-                console.log("FAILED: " + params.channel)
-                try {
-                    await app.client.conversations.join({
-                        token: process.env.TOKEN,
-                        channel: params.channel
-                    })
-                    history = await method(params)
-                } catch (e) {
-                    fetchReplyQueue.shift()
-                    continue
-                }
-            }
+            doThing(history, method, params, fetchReplyQueue)
 
             history.messages.forEach(message => {
                 if (message.user && message.user !== "undefined") {
@@ -188,7 +178,7 @@ const app = new App({
                             token: process.env.TOKEN,
                             user: user,
                         })
-                        
+
                         if (!response.user.real_name || response.user.real_name == "undefined") {
                             namedTop20.push([user, amount])
                             console.log(`${user}: ${amount}`)
