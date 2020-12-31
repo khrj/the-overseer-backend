@@ -119,7 +119,7 @@ const app = new App({
                 try {
                     await app.client.conversations.join({
                         token: process.env.TOKEN,
-                        channe: params.channel
+                        channel: params.channel
                     })
                     history = await method(params)
                 } catch (e) {
