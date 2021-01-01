@@ -1,6 +1,7 @@
 const { App } = require("@slack/bolt")
 const { MongoClient } = require("mongodb")
 const { writeFileSync } = require("fs")
+const sleepSynchronously = require('sleep-synchronously')
 
 const dbURI = `mongodb+srv://Replit:${process.env.MONGODB_PASSWORD}@cluster0.ua8g4.mongodb.net/<dbname>?retryWrites=true&w=majority`
 
@@ -79,6 +80,7 @@ const app = new App({
                 // Residue reply queue - the setInterval COULD be running, but burst behavior once is tolerated
                 while (fetchReplyQueue.length > 0) {
                     await processReplyQueue()
+                    sleepSynchronously(60 * 1000)
                 }
 
                 const sortedValues = Object.entries(userMap).sort(([, a], [, b]) => b - a)
@@ -177,7 +179,7 @@ const app = new App({
                 console.log("Reply queue empty, waiting for further messages")
                 break
             } else {
-                console.log("QUEUE LENGTH: " + fetchReplyQueue.length)
+                console.log("REPLY QUEUE LENGTH: " + fetchReplyQueue.length)
             }
 
             const method = fetchReplyQueue[0][0]
