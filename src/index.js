@@ -1,7 +1,6 @@
 const { App } = require("@slack/bolt")
 const { MongoClient } = require("mongodb")
 const { writeFileSync } = require("fs")
-const sleepSynchronously = require('sleep-synchronously')
 
 const dbURI = `mongodb+srv://Replit:${process.env.MONGODB_PASSWORD}@cluster0.ua8g4.mongodb.net/<dbname>?retryWrites=true&w=majority`
 
@@ -77,10 +76,13 @@ const app = new App({
                 clearInterval(replyQueueMonitor)
                 console.log("MESSAGE QUEUE OVER :)")
 
-                // Residue reply queue - the setInterval COULD be running, but burst behavior once is tolerated
+                // Buffer for a minute to make sure reply queue timeout is over
+                await sleep(60 * 1000)
+
+                // Complete reply queue
                 while (fetchReplyQueue.length > 0) {
                     await processReplyQueue()
-                    sleepSynchronously(60 * 1000)
+                    await sleep(60 * 1000)
                 }
 
                 const sortedValues = Object.entries(userMap).sort(([, a], [, b]) => b - a)
@@ -231,6 +233,11 @@ const app = new App({
     const replyQueueMonitor = setInterval(processReplyQueue, 60 * 1000)
 })()
 
+async function sleep (time) {
+    await new Promise(resolve => {
+        setTimeout(resolve, time)
+    })
+}
 // import { App } from "@slack/bolt"
 // import { readFileSync } from 'fs'
 // const sleepSynchronously = require('sleep-synchronously')
