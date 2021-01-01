@@ -6,12 +6,15 @@ const dbURI = `mongodb+srv://Replit:${process.env.MONGODB_PASSWORD}@cluster0.ua8
 
 const client = new MongoClient(dbURI, { useUnifiedTopology: true })
 
+const decemberStartEpoch = "1606809600" // 12am PST December 1st 2020
+const decemberEndEpoch = "1609488000" // 12am PST January 1st 2021
+
 let database
 let collection
 
-let fetchHistoryQueue = [
-    //    [function, params]
-]
+// Every element: [function, params]
+let fetchHistoryQueue = []
+let fetchReplyQueue = []
 
 const app = new App({
     signingSecret: process.env.SIGNING_SECRET,
@@ -65,24 +68,31 @@ const app = new App({
     }
     await getChannels(undefined)
 
-    async function processQueue() {
+    async function processMessageQueue() {
         // We're rate limited to 50 requests per minute
         for (let limit = 0; limit < 50; limit++) {
             if (fetchHistoryQueue.length <= 0) {
-                clearInterval(queueMonitor)
-                console.log("QUEUE OVER :)")
+                clearInterval(messageQueueMonitor)
+                clearInterval(replyQueueMonitor)
+                console.log("MESSAGE QUEUE OVER :)")
+
+                // Residue reply queue - the setInterval COULD be running, but burst behavior once is tolerated
+                while (fetchReplyQueue.length > 0) {
+                    await processReplyQueue()
+                }
 
                 const sortedValues = Object.entries(userMap).sort(([, a], [, b]) => b - a)
                 const top20 = sortedValues.slice(0, 20)
-                
+
                 let namedTop20 = []
 
                 for ([user, amount] of top20) {
                     try {
                         const response = await app.client.users.info({
                             token: process.env.TOKEN,
-                            user: user
+                            user: user,
                         })
+
                         if (!response.user.real_name || response.user.real_name == "undefined") {
                             namedTop20.push([user, amount])
                             console.log(`${user}: ${amount}`)
@@ -119,7 +129,7 @@ const app = new App({
                 try {
                     await app.client.conversations.join({
                         token: process.env.TOKEN,
-                        channe: params.channel
+                        channel: params.channel
                     })
                     history = await method(params)
                 } catch (e) {
@@ -132,6 +142,17 @@ const app = new App({
                 if (message.user && message.user !== "undefined") {
                     userMap[message.user] ? userMap[message.user]++ : userMap[message.user] = 1
                 }
+
+                // The reply_count property is only present on messages that have replies. 
+                // Compare the ts to the thread_ts to make sure we only count replies from a thread's parent message
+                if (message.reply_count & message.ts == message.thread_ts) {
+                    fetchReplyQueue.push([app.client.conversations.replies, {
+                        token: process.env.TOKEN,
+                        channel: params.channel,
+                        ts: message.thread_ts,
+                        limit: message.reply_count,
+                    }])
+                }
             })
 
             if (history.has_more) {
@@ -140,8 +161,8 @@ const app = new App({
                     channel: params.channel,
                     cursor: history.response_metadata.next_cursor,
                     limit: 1000,
-                    // Epoch time of 30 day prior date, in seconds
-                    oldest: ((new Date().getTime() - (30 * 24 * 60 * 60 * 1000)) / 1000).toString()
+                    oldest: decemberStartEpoch,
+                    latest: decemberEndEpoch
                 }])
             }
 
@@ -149,22 +170,63 @@ const app = new App({
         }
     }
 
-    function addLast30DaysAnalytics(channel) {
+    async function processReplyQueue() {
+        // We're rate limited to 50 requests per minute
+        for (let limit = 0; limit < 50; limit++) {
+            if (fetchReplyQueue.length <= 0) {
+                console.log("Reply queue empty, waiting for further messages")
+                break
+            } else {
+                console.log("QUEUE LENGTH: " + fetchReplyQueue.length)
+            }
+
+            const method = fetchReplyQueue[0][0]
+            const params = fetchReplyQueue[0][1]
+
+            let history
+
+            try {
+                history = await method(params)
+            } catch (e) {
+                console.log("FAILED: " + params.channel)
+                try {
+                    await app.client.conversations.join({
+                        token: process.env.TOKEN,
+                        channel: params.channel
+                    })
+                    history = await method(params)
+                } catch (e) {
+                    fetchReplyQueue.shift()
+                    continue
+                }
+            }
+
+            history.messages.forEach(message => {
+                if (message.user && message.user !== "undefined") {
+                    userMap[message.user] ? userMap[message.user]++ : userMap[message.user] = 1
+                }
+            })
+
+            fetchReplyQueue.shift()
+        }
+    }
+
+    channels.forEach(channel => {
         fetchHistoryQueue.push([app.client.conversations.history, {
             token: process.env.TOKEN,
             channel: channel,
             limit: 1000,
             // Epoch time of 30 day prior date, in seconds
-            oldest: ((new Date().getTime() - (30 * 24 * 60 * 60 * 1000)) / 1000).toString()
+            oldest: decemberStartEpoch,
+            latest: decemberEndEpoch
         }])
-    }
-
-    channels.forEach(channel => {
-        addLast30DaysAnalytics(channel)
     })
 
-    processQueue()
-    const queueMonitor = setInterval(processQueue, 60 * 1000)
+    processMessageQueue()
+    const messageQueueMonitor = setInterval(processMessageQueue, 60 * 1000)
+
+    processReplyQueue()
+    const replyQueueMonitor = setInterval(processReplyQueue, 60 * 1000)
 })()
 
 // import { App } from "@slack/bolt"
