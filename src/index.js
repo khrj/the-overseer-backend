@@ -6,8 +6,6 @@ const dbURI = `mongodb+srv://Replit:${process.env.MONGODB_PASSWORD}@cluster0.ua8
 
 const client = new MongoClient(dbURI, { useUnifiedTopology: true })
 
-const decemberStartEpoch = "1606809600" // 12am PST December 1st 2020
-const decemberEndEpoch = "1609488000" // 12am PST January 1st 2021
 
 let database
 let collection
@@ -165,8 +163,8 @@ const app = new App({
                     channel: params.channel,
                     cursor: history.response_metadata.next_cursor,
                     limit: 1000,
-                    oldest: decemberStartEpoch,
-                    latest: decemberEndEpoch
+                    // Epoch time of 30 day prior date, in seconds
+                    oldest: ((new Date().getTime() - (30 * 24 * 60 * 60 * 1000)) / 1000).toString()
                 }])
             }
 
@@ -221,8 +219,7 @@ const app = new App({
             channel: channel,
             limit: 1000,
             // Epoch time of 30 day prior date, in seconds
-            oldest: decemberStartEpoch,
-            latest: decemberEndEpoch
+            oldest: ((new Date().getTime() - (30 * 24 * 60 * 60 * 1000)) / 1000).toString()
         }])
     })
 
