@@ -1,0 +1,19 @@
+datasource db {
+    url      = env("DATABASE_URL")
+    provider = "postgresql"
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+model Channel {
+    id     String @id
+    status Status
+}
+
+enum Status {
+    UNREVIEWED
+    APPROVED
+    REJECTED
+}
