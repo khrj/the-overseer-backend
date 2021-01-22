@@ -4,10 +4,9 @@
 name: Node.js CI
 
 env:
-  SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
   TOKEN: ${{ secrets.TOKEN }}
-  MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }} 
 
 on:
   push:
