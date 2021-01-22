@@ -1,57 +1,50 @@
-const { App } = require("@slack/bolt")
-const { MongoClient } = require("mongodb")
-const { writeFileSync } = require("fs")
-
-const dbURI = `mongodb+srv://Replit:${process.env.MONGODB_PASSWORD}@cluster0.ua8g4.mongodb.net/<dbname>?retryWrites=true&w=majority`
-
-const client = new MongoClient(dbURI, { useUnifiedTopology: true })
-
-
-let database
-let collection
+import { WebClient } from "@slack/web-api"
+import { writeFileSync } from "fs"
+import { PrismaClient, Status } from "@prisma/client"
+const prisma = new PrismaClient()
 
 // Every element: [function, params]
 let fetchHistoryQueue = []
 let fetchReplyQueue = []
 
-const app = new App({
-    signingSecret: process.env.SIGNING_SECRET,
-    token: process.env.TOKEN
-})
-    ;
-(async () => {
-    await app.start(process.env.PORT || 3000)
-    await client.connect()
-    database = client.db('Cluster0')
-    collection = database.collection('channels')
+const slack = new WebClient(process.env.TOKEN)
 
+async function main() {
     let channels = []
     let userMap = {}
 
-    async function isValidChannel(channel) {
-        try {
-            const response = await collection.findOne({ channel: channel })
-            if (response.status === "approved") {
+    async function isValidChannel(channel: string) {
+        const response = await prisma.channel.upsert({
+            where: { id: channel },
+            create: {
+                id: channel,
+                status: Status.UNREVIEWED
+            },
+            update: {}
+        })
+
+        switch (response.status) {
+            case Status.APPROVED:
                 console.log("APPROVED: " + channel)
                 return true
-            } else {
+    
+            case Status.REJECTED:
                 console.log("EXPLICITLY REJECTED: " + channel)
                 return false
-            }
-        } catch (e) {
-            console.log("IMPLICITLY REJECTED: " + channel)
-            return false
+            
+            case Status.UNREVIEWED:
+                console.log("IMPLICITLY REJECTED: " + channel)
+                return false
         }
     }
 
-    async function getChannels(cursor) {
-        const conversations = await app.client.conversations.list({
-            token: process.env.TOKEN,
+    async function getChannels(cursor: string) {
+        const conversations: any = await slack.conversations.list({
             limit: 200,
             cursor: cursor
         })
 
-        for (channel of conversations.channels) {
+        for (const channel of conversations.channels) {
             if (!channel.is_archived) {
                 const valid = await isValidChannel(channel.id)
                 if (valid) {
@@ -83,15 +76,15 @@ const app = new App({
                     await sleep(60 * 1000)
                 }
 
+                // @ts-ignore
                 const sortedValues = Object.entries(userMap).sort(([, a], [, b]) => b - a)
                 const top20 = sortedValues.slice(0, 20)
 
                 let namedTop20 = []
 
-                for ([user, amount] of top20) {
+                for (const [user, amount] of top20) {
                     try {
-                        const response = await app.client.users.info({
-                            token: process.env.TOKEN,
+                        const response: any = await slack.users.info({
                             user: user,
                         })
 
@@ -122,15 +115,14 @@ const app = new App({
             const method = fetchHistoryQueue[0][0]
             const params = fetchHistoryQueue[0][1]
 
-            let history
+            let history: any
 
             try {
                 history = await method(params)
             } catch (e) {
                 console.log("FAILED: " + params.channel)
                 try {
-                    await app.client.conversations.join({
-                        token: process.env.TOKEN,
+                    await slack.conversations.join({
                         channel: params.channel
                     })
                     history = await method(params)
@@ -140,16 +132,15 @@ const app = new App({
                 }
             }
 
-            history.messages.forEach(message => {
+            history.messages.forEach((message: any) => {
                 if (message.user && message.user !== "undefined") {
                     userMap[message.user] ? userMap[message.user]++ : userMap[message.user] = 1
                 }
 
                 // The reply_count property is only present on messages that have replies. 
                 // Compare the ts to the thread_ts to make sure we only count replies from a thread's parent message
-                if (message.reply_count & message.ts == message.thread_ts) {
-                    fetchReplyQueue.push([app.client.conversations.replies, {
-                        token: process.env.TOKEN,
+                if (message.reply_count && message.ts == message.thread_ts) {
+                    fetchReplyQueue.push([slack.conversations.replies, {
                         channel: params.channel,
                         ts: message.thread_ts,
                         limit: message.reply_count,
@@ -158,8 +149,7 @@ const app = new App({
             })
 
             if (history.has_more) {
-                fetchHistoryQueue.push([app.client.conversations.history, {
-                    token: process.env.TOKEN,
+                fetchHistoryQueue.push([slack.conversations.history, {
                     channel: params.channel,
                     cursor: history.response_metadata.next_cursor,
                     limit: 1000,
@@ -185,15 +175,14 @@ const app = new App({
             const method = fetchReplyQueue[0][0]
             const params = fetchReplyQueue[0][1]
 
-            let history
+            let history: any
 
             try {
                 history = await method(params)
             } catch (e) {
                 console.log("FAILED: " + params.channel)
                 try {
-                    await app.client.conversations.join({
-                        token: process.env.TOKEN,
+                    await slack.conversations.join({
                         channel: params.channel
                     })
                     history = await method(params)
@@ -203,7 +192,7 @@ const app = new App({
                 }
             }
 
-            history.messages.forEach(message => {
+            history.messages.forEach((message: any) => {
                 if (message.user && message.user !== "undefined") {
                     userMap[message.user] ? userMap[message.user]++ : userMap[message.user] = 1
                 }
@@ -214,8 +203,7 @@ const app = new App({
     }
 
     channels.forEach(channel => {
-        fetchHistoryQueue.push([app.client.conversations.history, {
-            token: process.env.TOKEN,
+        fetchHistoryQueue.push([slack.conversations.history, {
             channel: channel,
             limit: 1000,
             // Epoch time of 30 day prior date, in seconds
@@ -228,38 +216,12 @@ const app = new App({
 
     processReplyQueue()
     const replyQueueMonitor = setInterval(processReplyQueue, 60 * 1000)
-})()
+}
 
-async function sleep (time) {
+async function sleep(time: number) {
     await new Promise(resolve => {
         setTimeout(resolve, time)
     })
 }
-// import { App } from "@slack/bolt"
-// import { readFileSync } from 'fs'
-// const sleepSynchronously = require('sleep-synchronously')
 
-// const app = new App({
-//     signingSecret: process.env.signing_secret,
-//     token: process.env.TOKEN
-// })
-
-// const channels = readFileSync('channels.txt', 'utf8').split(/\r?\n/)
-
-// app.start(process.env.PORT || 3000).then(() => {
-//     let counter = 0
-//     channels.forEach((channel) => {
-//         app.client.conversations.join({
-//             token: process.env.TOKEN,
-//             channel: channel
-//         }).then(() => {
-//             console.log(`${counter}: ${channel}`)
-//             counter++
-//             if (counter > 50) {
-//                 sleepSynchronously(60000)
-//                 counter = 0
-//             }
-//         })
-//     })
-//     console.log("DONE :)")
-// }
+main()
