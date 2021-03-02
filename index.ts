@@ -121,15 +121,8 @@ async function main() {
                 history = await method(params)
             } catch (e) {
                 console.log("FAILED: " + params.channel)
-                try {
-                    await slack.conversations.join({
-                        channel: params.channel
-                    })
-                    history = await method(params)
-                } catch (e) {
-                    fetchHistoryQueue.shift()
-                    continue
-                }
+                fetchHistoryQueue.shift()
+                continue
             }
 
             history.messages.forEach((message: any) => {
