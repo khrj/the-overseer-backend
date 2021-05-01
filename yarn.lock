@@ -1746,10 +1746,10 @@ signal-exit@^3.0.2:
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-3.0.3.tgz#a1410c2edd8f077b08b4e253c8eacfcaf057461c"
   integrity sha512-VUJ49FC8U1OxwZLxIbTTrDvLnf/6TDgxZcK8wxR8zs13xpx7xbG60ndBlhNrFi2EMuFRoeDoJO7wthSLq42EjA==
 
-sleep-synchronously@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/sleep-synchronously/-/sleep-synchronously-1.0.0.tgz#209f652bb05223cf7b97f8be7cdd680f4107b10d"
-  integrity sha512-0jIjcApuszxy+8q84PGVuue0fgxYCUUZoRfUYBpKotyNay9ellj1KGqPWRv1Z4udM/HdSYxC46xUTWnqjumqeQ==
+sleep-synchronously@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/sleep-synchronously/-/sleep-synchronously-2.0.0.tgz#2bbbc640f7723db0bcc5ce153fbafc7b68f7bc92"
+  integrity sha512-jUT5wbEyeo4P5FkZJhZD8HiMcq+gkg/8GPxG3uuxrtfUuKOzFL5k7AXD/xcZOYHmsTSzvKLnoE8VpI883vzdTQ==
 
 source-map-support@^0.5.17:
   version "0.5.19"
