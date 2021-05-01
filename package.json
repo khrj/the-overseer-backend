@@ -4,7 +4,7 @@
 	"main": "index.js",
 	"license": "GPL-3.0",
 	"dependencies": {
-		"@prisma/client": "2.15.0",
+		"@prisma/client": "2.21.2",
 		"@slack/bolt": "^3.3.0",
 		"dotenv": "^8.2.0",
 		"mongodb": "^3.6.6",
