@@ -14,7 +14,7 @@
 	},
 	"devDependencies": {
 		"@prisma/cli": "2.15.0",
-		"@types/node": "^14.14.22",
+		"@types/node": "^15.3.1",
 		"nodemon": "^2.0.4"
 	},
 	"scripts": {
