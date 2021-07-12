@@ -5,8 +5,7 @@ This repository contains the source for @TheOverseer, the analytics bot at Hack 
 The Overseer is split into
 
 - The Backend (This) -- A script that runs on the hour and computes Analytics
-- [The Frontend](https://github.com/KhushrajRathod/TheOverseerFrontend) -- Listeners for the bot's slash commands and channel-join events
-- [Extras](https://github.com/KhushrajRathod/TheOverseerExtras) -- Extra features for The Overseer
+- [The Frontend](https://github.com/khrj/the-overseer-frontend) -- Listeners for the bot's slash commands and channel-join events
 
 ## Running
 
